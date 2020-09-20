@@ -17,81 +17,44 @@ if(file.exists(destFile))
         unzip(destFile)
 
 ## 5. Read files
-# a. Read features
-featuresFile <- paste("UCI HAR Dataset","features.txt", sep = "/")
-features <- read.table(featuresFile, col.names = c("rownumber", "variablename"))
 
-# b. make variables tidy
-fvariables <- mutate(features, variablename = gsub("BodyBody", "Body", variablename))
-fvariables <- mutate(fvariables, variablename = tolower(variablename))
-fvariables <- mutate(fvariables, variablename = gsub("-", "", variablename))
-fvariables <- mutate(fvariables, variablename = gsub("\\(", "", variablename))
-fvariables <- mutate(fvariables, variablename = gsub("\\)", "", variablename))
-fvariables <- mutate(fvariables, variablename = gsub(",", "", variablename))
+features <- read.table("UCI HAR Dataset/features.txt", col.names = c("rownumber", "variablename"))
+# a. make variables tidy
+features <- mutate(features, variablename = gsub("BodyBody", "Body", variablename))
+features <- mutate(features, variablename = tolower(variablename))
+features <- mutate(features, variablename = gsub("-", "", variablename))
+features <- mutate(features, variablename = gsub("\\(", "", variablename))
+features <- mutate(features, variablename = gsub("\\)", "", variablename))
+features <- mutate(features, variablename = gsub(",", "", variablename))
 
-filtervariables <- filter(fvariables, grepl("mean\\(\\)|std\\(\\)", variablename))
+activitieslabels <- read.table("UCI HAR Dataset/activity_labels.txt", col.names = c("activity", "description"))
+# b. make activities tidy
+activitieslabels <- mutate(activitieslabels, description = gsub("_", "", description))
+activitieslabels <- mutate(activitieslabels,description = tolower(description))
 
-# c. Read activity labels
-activitylabelsFile <- paste("UCI HAR Dataset","activity_labels.txt", sep = "/")
-activitylabels <- read.table(activitylabelsFile, col.names = c("activity", "description"))
+subject_test <- read.table("UCI HAR Dataset/test/subject_test.txt", col.names = "subject")
+x_test <- read.table("UCI HAR Dataset/test/X_test.txt", col.names = features$functions)
+y_test <- read.table("UCI HAR Dataset/test/y_test.txt", col.names = "code")
+subject_train <- read.table("UCI HAR Dataset/train/subject_train.txt", col.names = "subject")
+x_train <- read.table("UCI HAR Dataset/train/X_train.txt", col.names = features$functions)
+y_train <- read.table("UCI HAR Dataset/train/y_train.txt", col.names = "code")
 
-# d. make activities tidy
+#Merges the data
+#x_test
+testData <- rbind(x_train, x_test)
+#y_test
+trainData <- rbind(y_train, y_test)
+#subject
+Subject <- rbind(subject_train, subject_test)
+#merge
+mergetesttrain <- cbind(Subject, trainData, testData)
 
-avariables <- mutate(activitylabels, description = gsub("_", "", description))
-avariables <- mutate(avariables,description = tolower(description))
+#filter by the mean and standard deviation
+filtermergetesttrain <- mergetesttrain %>% select(subject, code, contains("mean"), contains("std"))
 
+#Name the activities
+filtermergetesttrain$code <- activitieslabels[filtermergetesttrain$code, 2]
 
-# e. Read test data
-testvaluesFile <- paste("UCI HAR Dataset","test/X_test.txt", sep = "/")
-testvalues <- read.table(testvaluesFile, col.names = fvariables$variable)
-testfiltervalues <- testvalues[ ,filtervariables$variablename]
-
-# f. Read test activities
-testactivitiesFile <- paste("UCI HAR Dataset","test/y_test.txt", sep = "/")
-testactivities <- read.table(testactivitiesFile, col.names = c("activity"))
-
-# g. Read test subjects
-testsubjectsFile <- paste("UCI HAR Dataset","test/subject_test.txt", sep = "/")
-testsubjects <- read.table(testsubjectsFile, col.names = c("subject"))
-
-# h. Merges test activities with labels
-mergetestactivities <- merge(testactivities, avariables)
-
-# i. Combining test values, activities, subjects
-testdata <- cbind(mergetestactivities, testsubjects, testfiltervalues)
-
-# j. Read train data
-trainvaluesFile <- paste("UCI HAR Dataset","train/X_train.txt", sep = "/")
-trainvalues <- read.table(trainvaluesFile, col.names = fvariables$variable)
-trainfiltervalues <- trainvalues[ ,filtervariables$variablename]
-
-# k. Read train activities
-trainactivitiesFile <- paste("UCI HAR Dataset","train/y_train.txt", sep = "/")
-trainactivities <- read.table(trainactivitiesFile, col.names = c("activity"))
-
-# l. Read train subjects
-trainsubjectsFile <- paste("UCI HAR Dataset","train/subject_train.txt", sep = "/")
-trainsubjects <- read.table(trainsubjectsFile, col.names = c("subject"))
-
-# m. Merges train activities with labels
-mergetrainactivities <- merge(trainactivities, avariables)
-
-# n. Combining train values, activities, subjects
-traindata <- cbind(mergetrainactivities, trainsubjects, trainfiltervalues)
-
-## 6. Merge test data and train data
-data <- rbind(testdata, traindata)
-data <- mutate(data, subject = as.factor(data$subject))
-
-# a. Write a file to reuse
-write.table(data, "ActivitySubject_by_meanAndstddev.txt")
-
-## 7. Group by for average
-# a. Group by activity and subject
-groupdata <- group_by(data, description, subject)
-
-# b. Average
-averagedata <- summarise_each(groupdata, funs(mean))
-
-# a. Write a file to reuse
-write.table(averagedata, "Average_by_activityandsubject.txt")
+#Average of each variable for each activity and each subject
+data <- filtermergetesttrain %>% group_by(subject, filtermergetesttrain$code) %>% summarise_all(funs(mean))
+write.table(data, "Average_by_activityandsubject.txt", row.name=FALSE)
