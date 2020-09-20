@@ -52,7 +52,7 @@ testactivities <- read.table(testactivitiesFile, col.names = c("activity"))
 
 # g. Read test subjects
 testsubjectsFile <- paste("UCI HAR Dataset","test/subject_test.txt", sep = "/")
-testsubjects <- read.table(testsubjectsFile, col.names = c("suject"))
+testsubjects <- read.table(testsubjectsFile, col.names = c("subject"))
 
 # h. Merges test activities with labels
 mergetestactivities <- merge(testactivities, avariables)
@@ -71,7 +71,7 @@ trainactivities <- read.table(trainactivitiesFile, col.names = c("activity"))
 
 # l. Read train subjects
 trainsubjectsFile <- paste("UCI HAR Dataset","train/subject_train.txt", sep = "/")
-trainsubjects <- read.table(trainsubjectsFile, col.names = c("suject"))
+trainsubjects <- read.table(trainsubjectsFile, col.names = c("subject"))
 
 # m. Merges train activities with labels
 mergetrainactivities <- merge(trainactivities, avariables)
@@ -81,7 +81,7 @@ traindata <- cbind(mergetrainactivities, trainsubjects, trainfiltervalues)
 
 ## 6. Merge test data and train data
 data <- rbind(testdata, traindata)
-data <- mutate(data, subject = as.factor(data$suject))
+data <- mutate(data, subject = as.factor(data$subject))
 
 # a. Write a file to reuse
 write.table(data, "ActivitySubject_by_meanAndstddev.txt")
